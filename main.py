@@ -7,6 +7,7 @@ FONT_SIZE = 20
 class Game:
     def __init__(self):
         self.current_player = 1;
+        self.end_of_game = False
         self.window = Tk()
         self.window.title("DwellingRock")
         self.width = 900
@@ -17,6 +18,9 @@ class Game:
         self.player2 = Player(self.canv)
         self.player1.test()
         self.player2.test()
+        for i in range(5):
+            self.player1.draw_card()
+            self.player2.draw_card()
         self.canv.bind("<Button-1>", self.click_handler)
         self.atk_card = (None,None)
         self.info_text = self.canv.create_text(0,0)
@@ -33,6 +37,19 @@ class Game:
         self.canv.after(1000//15,self.new_frame)
         self.window.mainloop()
     def new_frame(self):
+        if self.player1.health <= 0:
+            self.end_of_game = True
+        if self.player2.health <= 0:
+            self.end_of_game = True
+        if self.end_of_game:
+            self.w_rect = self.canv.create_rectangle(0,0,\
+                                                     self.canv.winfo_width(),self.canv.winfo_height(),\
+                                                     fill="grey",\
+                                                     )
+            self.w_id = self.canv.create_text(50,50,text="{} Won The Game".format(\
+                                              "Player1" if self.player2.health <= 0 else "Player2"),\
+                                              font=("",FONT_SIZE * 2),\
+                                              anchor=NW)
         self.canv.itemconfig(self.info_text,\
                              text= "Player {} is playing".format(self.current_player))
         self.player1.clear_dead()
@@ -60,7 +77,7 @@ class Game:
         if 56 <= e.x <= 56 + 80 and 345 <= e.y <= 345 + 80:
             return self.finish_turn()
         for index, card in enumerate(current_player.hand):
-            if card.is_clicked((e.x,e.y)):
+            if card.is_clicked((e.x,e.y)) and len(current_player.battlefield) <= 8:
                 if current_player.mana - card.cost >= 0:
                     current_player.battlefield.append(\
                                     current_player.hand.pop(index).remove_attack())
@@ -71,14 +88,12 @@ class Game:
                 self.atk_card = (card,index)
                 return
         if self.atk_card != (None,None):
-            print("LOL")
             if 770 <= e.x <= 770 + 80 and 345 <= e.y <= 345 + 80:
                 (self.player1 if self.current_player == 2 \
                                          else self.player2).health -= self.atk_card[0].attack
                 self.atk_card[0].can_attack = False
                 current_player.battlefield[self.atk_card[1]] = self.atk_card[0]
                 self.atk_card = (None,None)
-                print("attacked")
                 return
             for index,card in enumerate((self.player1 if self.current_player == 2 \
                                          else self.player2).battlefield):
@@ -99,6 +114,8 @@ class Game:
             card.custom()
         current_player.mana_max += 1 if current_player.mana_max < 10 else 0
         current_player.mana = current_player.mana_max
+        if len(current_player.hand) < 6:
+            current_player.draw_card()
 class Player:
     def __init__(self,canv):
         self.canv = canv
@@ -116,12 +133,12 @@ class Player:
         self.canv.itemconfig(self.m_id,text="{}/{}".format(self.mana,self.mana_max),\
                              font=("",FONT_SIZE),fill="blue")
     def draw_card(self):
+        if len(self.deck) >= 1:
+            self.hand.append(self.deck.pop())
         return
     def test(self):
-        #self.mana_max  = 10
-        #self.mana = 10
-        for i in range(6):
-            self.hand.append(Card({"image": "./patchouli.gif",
+        for i in range(20):
+            self.deck.append(Card({"image": "./patchouli.gif",
                                "attack": 8,
                                "health": 7,
                                "mana":i +  1,
@@ -221,12 +238,16 @@ class Card:
         self.can_attack = False
         self.id = canv.create_image(self.coords[0],self.coords[1], anchor=NW, \
                                     image = self.image)
-        self.a_id = canv.create_text(0,0, anchor=NW)
+        self.a_id = canv.create_text(-1000,-1000, anchor=NW)
         canv.itemconfig(self.a_id, text = self.attack,font = ("", FONT_SIZE), fill="orange")
-        self.h_id = canv.create_text(0,0, anchor=NW)
+        self.h_id = canv.create_text(-1000,-1000, anchor=NW)
         canv.itemconfig(self.h_id, text = self.health,font = ("", FONT_SIZE), fill="green")
-        self.c_id = canv.create_text(0,0, anchor=NW)
+        self.c_id = canv.create_text(-1000,-1000, anchor=NW)
         canv.itemconfig(self.c_id, text = self.cost,font = ("", FONT_SIZE), fill="blue")
+        self.atk_id = canv.create_rectangle(self.coords[0],self.coords[1],\
+                                            self.coords[0] + self.image.width(),\
+                                            self.coords[1] + self.image.height(),\
+                                            )
         self.canv = canv
     def remove_attack(self):
         self.can_attack = False
@@ -243,12 +264,20 @@ class Card:
                          int(self.coords[1]))
         self.canv.coords(self.c_id, int(self.coords[0] + self.image.width() * 0.40 ),\
                          int(self.coords[1] + self.image.height() * 0.80))
+        self.canv.coords(self.atk_id, self.coords[0],self.coords[1],\
+                         self.coords[0] + self.image.width(),\
+                         self.coords[1] + self.image.height())
+        self.canv.itemconfig(self.atk_id,width=2,outline= "green" if self.can_attack else "red")
     def hide(self):
         self.coords = (-1000,-1000)
         self.canv.coords(self.id, self.coords[0], self.coords[1])
         self.canv.coords(self.a_id, self.coords[0], self.coords[1])
         self.canv.coords(self.h_id, self.coords[0], self.coords[1])
         self.canv.coords(self.c_id, self.coords[0],self.coords[1])
+        self.canv.coords(self.atk_id, self.coords[0],self.coords[1],\
+                         self.coords[0] + self.image.width(),\
+                         self.coords[1] + self.image.height())
+        self.canv.itemconfig(self.atk_id,width=2,outline= "green" if self.can_attack else "red")
     def is_clicked(self,coords):
         if self.coords[0] < coords[0] < self.coords[0] + self.image.width():
             if self.coords[1] < coords[1] < self.coords[1] + self.image.height():
