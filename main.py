@@ -8,7 +8,7 @@ class Game:
     def __init__(self):
         self.current_player = 1;
         self.window = Tk()
-        self.window.title("Card Game")
+        self.window.title("DwellingRock")
         self.width = 900
         self.height = 450
         self.canv = Canvas(self.window, width = self.width, height =self.height, bg ='Grey')
@@ -18,14 +18,25 @@ class Game:
         self.player1.test()
         self.player2.test()
         self.canv.bind("<Button-1>", self.click_handler)
-        self.s_card = (None,None)
+        self.atk_card = (None,None)
+        self.info_text = self.canv.create_text(0,0)
+        self.canv.itemconfig(self.info_text,\
+                             text= "Player {} is playing".format(self.current_player),\
+                             fill= "black",\
+                             anchor= NW,\
+                             font= ("",int(FONT_SIZE * 0.95))\
+                             )
+        self.canv.coords(self.info_text,350,2)
+        self.canv.create_rectangle(56,345,56+80,345+80,fill="red")
+        self.canv.create_rectangle(770,345,770+80,345+80,fill="red")
     def start(self):
         self.canv.after(1000//15,self.new_frame)
         self.window.mainloop()
     def new_frame(self):
-        self.canv.after(1000//15,self.new_frame)
-        #self.player1.battlefield[0].draw( 0,75)
-        #self.player1.battlefield[1].draw( 200,75)
+        self.canv.itemconfig(self.info_text,\
+                             text= "Player {} is playing".format(self.current_player))
+        self.player1.clear_dead()
+        self.player2.clear_dead()
         if self.current_player == 1:
             self.player1.draw_ally_info()
             self.player1.draw_hand()
@@ -40,19 +51,54 @@ class Game:
             self.player1.draw_en_bf()
             self.player1.hide_hand()
             self.player1.draw_en_info()
+        self.canv.after(1000//15,self.new_frame)
         return
     def click_handler(self,e):
-        for index,card in enumerate(self.player1.battlefield):
-            if card.is_clicked((e.x,e.y)) and self.s_card == (None,None):
-                self.s_card = (card, index)
-            elif card.is_clicked((e.x,e.y)):
-                cards = self.s_card[0].battle(card)
-                self.player1.battlefield[self.s_card[1]] = cards[0]
-                self.player1.battlefield[index] = cards[1]
-                self.s_card = (None, None)
-        return
-
-
+        print(e.x,e.y)
+        current_player = self.player1 if self.current_player == 1 \
+                                     else self.player2;
+        if 56 <= e.x <= 56 + 80 and 345 <= e.y <= 345 + 80:
+            return self.finish_turn()
+        for index, card in enumerate(current_player.hand):
+            if card.is_clicked((e.x,e.y)):
+                if current_player.mana - card.cost >= 0:
+                    current_player.battlefield.append(\
+                                    current_player.hand.pop(index).remove_attack())
+                    current_player.mana -= card.cost
+                    return
+        for index,card in enumerate(current_player.battlefield):
+            if card.is_clicked((e.x,e.y)) and card.can_attack:
+                self.atk_card = (card,index)
+                return
+        if self.atk_card != (None,None):
+            print("LOL")
+            if 770 <= e.x <= 770 + 80 and 345 <= e.y <= 345 + 80:
+                (self.player1 if self.current_player == 2 \
+                                         else self.player2).health -= self.atk_card[0].attack
+                self.atk_card[0].can_attack = False
+                current_player.battlefield[self.atk_card[1]] = self.atk_card[0]
+                self.atk_card = (None,None)
+                print("attacked")
+                return
+            for index,card in enumerate((self.player1 if self.current_player == 2 \
+                                         else self.player2).battlefield):
+                if card.is_clicked((e.x,e.y)):
+                    cards = self.atk_card[0].battle(card)
+                    current_player.battlefield[self.atk_card[1]] = cards[0]
+                    (self.player1 if self.current_player == 2 \
+                                         else self.player2).battlefield[index] = cards[1]
+                    self.atk_card = (None,None)
+    def finish_turn(self):
+        self.current_player = 2 if self.current_player == 1 else 1
+        current_player = self.player1 if self.current_player == 1 \
+                                     else self.player2;
+        old_player = self.player1 if self.current_player == 2 \
+                                     else self.player2;
+        for card in current_player.battlefield:
+            card.can_attack = True
+            card.custom()
+        current_player.mana_max += 1 if current_player.mana_max < 10 else 0
+        current_player.mana = current_player.mana_max
 class Player:
     def __init__(self,canv):
         self.canv = canv
@@ -72,14 +118,16 @@ class Player:
     def draw_card(self):
         return
     def test(self):
-        for i in range(5):
+        #self.mana_max  = 10
+        #self.mana = 10
+        for i in range(6):
             self.hand.append(Card({"image": "./patchouli.gif",
                                "attack": 8,
                                "health": 7,
-                               "mana":i,
+                               "mana":i +  1,
                             "name": "patchouli"},
                               self.canv))
-        for i in range(8):
+        for i in range(0):
             self.battlefield.append(Card({"image": "./patchouli.gif",
                                "attack": i,
                                "health": i,
@@ -96,7 +144,7 @@ class Player:
             self.hand[0].draw(406,320)
         elif len(self.hand) == 2:
             self.hand[0].draw(350,320)
-            self.hand[1].draw(363,320)
+            self.hand[1].draw(463,320)
         elif len(self.hand) == 3:
             self.hand[0].draw(306,320)
             self.hand[1].draw(406,320)
@@ -119,32 +167,46 @@ class Player:
             self.hand[3].draw(456,320)
             self.hand[4].draw(556,320)
             self.hand[5].draw(656,320)
+        elif len(self.hand) == 0:
+            pass
         else:
+            #raise "player hand not valid"
             print(len(self.hand))
         return
     def draw_ally_bf(self):
+        offset = 52 if len(self.battlefield) % 2 == 0 else 106
         for i in range(len(self.battlefield)):
-                       self.battlefield[i].draw(100*i + 56, 183)
+            c_offset = 50 * ((8 if len(self.battlefield) % 2 == 0 else 7)\
+                             - len(self.battlefield))
+            self.battlefield[i].draw(100*i + offset + c_offset\
+                    , 183)
         return
     def draw_ally_info(self):
         self.canv.itemconfig(self.h_id, text=self.health, anchor=NW)
         self.canv.itemconfig(self.m_id, text="{}/{}".format(self.mana,self.mana_max),\
                              anchor=NW)
         self.canv.coords(self.h_id,0, self.canv.winfo_height() * 0.95)
-        self.canv.coords(self.m_id, self.canv.winfo_width() * 0.95,\
+        self.canv.coords(self.m_id, self.canv.winfo_width() * 0.92,\
                          self.canv.winfo_height() * 0.95)
         return
     def draw_en_bf(self):
+        offset = 52 if len(self.battlefield) % 2 == 0 else 106
         for i in range(len(self.battlefield)):
-                       self.battlefield[i].draw(100*i + 56, 46)
-        return
+            c_offset = 50 * ((8 if len(self.battlefield) % 2 == 0 else 7)\
+                             - len(self.battlefield))
+            self.battlefield[i].draw(100*i + offset + c_offset\
+                    , 46)
     def draw_en_info(self):
         self.canv.itemconfig(self.h_id, text=self.health, anchor=NW)
         self.canv.itemconfig(self.m_id, text="{}/{}".format(self.mana,self.mana_max),\
                              anchor=NW)
         self.canv.coords(self.h_id,0, 0)
-        self.canv.coords(self.m_id, self.canv.winfo_width() * 0.95,0)
-        return
+        self.canv.coords(self.m_id, self.canv.winfo_width() * 0.92,0)
+    def clear_dead(self):
+        for index,card in enumerate(self.battlefield):
+            if card.health <= 0:
+                card.hide()
+                self.battlefield.pop(index)
 
 
 class Card:
@@ -156,6 +218,7 @@ class Card:
         self.health = int(card["health"])
         self.cost = int(card["mana"])
         self.coords = (-1000,-1000)
+        self.can_attack = False
         self.id = canv.create_image(self.coords[0],self.coords[1], anchor=NW, \
                                     image = self.image)
         self.a_id = canv.create_text(0,0, anchor=NW)
@@ -165,6 +228,9 @@ class Card:
         self.c_id = canv.create_text(0,0, anchor=NW)
         canv.itemconfig(self.c_id, text = self.cost,font = ("", FONT_SIZE), fill="blue")
         self.canv = canv
+    def remove_attack(self):
+        self.can_attack = False
+        return self
 
     def draw(self,x,y):
         self.coords = (x,y)
@@ -192,12 +258,15 @@ class Card:
     def battle(self,card):
         self.health -= card.attack;
         card.health -= self.attack;
+        card.can_attack = False
+        self.can_attack = False
         return (self,card)
 
     def scale(self):
         self.image = self.image.zoom(IMG_FSIZE[0] // 10)
         self.image = self.image.subsample(IMG_BSIZE[1] // 10)
-
+    def custom(self):
+        pass
 
 
 game = Game()
