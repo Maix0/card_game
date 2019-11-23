@@ -1,9 +1,13 @@
 from tkinter import *
+import json
+import random
 
 IMG_FSIZE= (135,150)
 IMG_BSIZE= (200,300)
 
 FONT_SIZE = 20
+
+DECK_FILE = "./deck.json"
 class Game:
     def __init__(self):
         self.current_player = 1;
@@ -71,7 +75,6 @@ class Game:
         self.canv.after(1000//15,self.new_frame)
         return
     def click_handler(self,e):
-        print(e.x,e.y)
         current_player = self.player1 if self.current_player == 1 \
                                      else self.player2;
         if 56 <= e.x <= 56 + 80 and 345 <= e.y <= 345 + 80:
@@ -88,7 +91,8 @@ class Game:
                 self.atk_card = (card,index)
                 return
         if self.atk_card != (None,None):
-            if 770 <= e.x <= 770 + 80 and 345 <= e.y <= 345 + 80:
+            if 770 <= e.x <= 770 + 80 and 345 <= e.y <= 345 + 80 and \
+                    not (self.player1 if self.current_player == 2 else self.player2).has_taunt():
                 (self.player1 if self.current_player == 2 \
                                          else self.player2).health -= self.atk_card[0].attack
                 self.atk_card[0].can_attack = False
@@ -97,7 +101,8 @@ class Game:
                 return
             for index,card in enumerate((self.player1 if self.current_player == 2 \
                                          else self.player2).battlefield):
-                if card.is_clicked((e.x,e.y)):
+                if card.is_clicked((e.x,e.y)) and (not (self.player1 if self.current_player == 2 \
+                                         else self.player2).has_taunt() or card.taunt == True):
                     cards = self.atk_card[0].battle(card)
                     current_player.battlefield[self.atk_card[1]] = cards[0]
                     (self.player1 if self.current_player == 2 \
@@ -120,7 +125,7 @@ class Player:
     def __init__(self,canv):
         self.canv = canv
         self.deck = []
-        self.base_deck = []
+        self.load_deck()
         self.health = 15
         self.mana_max = 1
         self.mana =  1
@@ -132,11 +137,23 @@ class Player:
                              fill="red")
         self.canv.itemconfig(self.m_id,text="{}/{}".format(self.mana,self.mana_max),\
                              font=("",FONT_SIZE),fill="blue")
+    def load_deck(self):
+        f = open(DECK_FILE,"r")
+        self.deck = json.load(f)
+        random.shuffle(self.deck)
+        self.deck = list(map(lambda c: Card(c,self.canv),self.deck))
+
     def draw_card(self):
         if len(self.deck) >= 1:
             self.hand.append(self.deck.pop())
         return
+    def has_taunt(self):
+        for card in self.battlefield:
+            if card.taunt == True:
+                return True
+        return False
     def test(self):
+        return
         for i in range(20):
             self.deck.append(Card({"image": "./patchouli.gif",
                                "attack": 8,
@@ -234,6 +251,7 @@ class Card:
         self.attack = int(card["attack"])
         self.health = int(card["health"])
         self.cost = int(card["mana"])
+        self.taunt = bool(card["taunt"])
         self.coords = (-1000,-1000)
         self.can_attack = False
         self.id = canv.create_image(self.coords[0],self.coords[1], anchor=NW, \
@@ -248,6 +266,10 @@ class Card:
                                             self.coords[0] + self.image.width(),\
                                             self.coords[1] + self.image.height(),\
                                             )
+        self.taunt_id = canv.create_rectangle(self.coords[0] - 3, self.coords[1] - 3,\
+                                            self.coords[0] + self.image.width() + 3, \
+                                            self.coords[1] + self.image.height() + 3)
+        canv.itemconfig(self.taunt_id, outline= "grey" if self.taunt else "", width=4)
         self.canv = canv
     def remove_attack(self):
         self.can_attack = False
@@ -267,7 +289,11 @@ class Card:
         self.canv.coords(self.atk_id, self.coords[0],self.coords[1],\
                          self.coords[0] + self.image.width(),\
                          self.coords[1] + self.image.height())
+        self.canv.coords(self.taunt_id,self.coords[0] - 3, self.coords[1] - 3,\
+                         self.coords[0] + self.image.width() + 3,\
+                         self.coords[1] + self.image.height() + 3)
         self.canv.itemconfig(self.atk_id,width=2,outline= "green" if self.can_attack else "red")
+        self.canv.itemconfig(self.taunt_id,width=2,outline= "#1E1E1E" if self.taunt else "")
     def hide(self):
         self.coords = (-1000,-1000)
         self.canv.coords(self.id, self.coords[0], self.coords[1])
@@ -277,7 +303,11 @@ class Card:
         self.canv.coords(self.atk_id, self.coords[0],self.coords[1],\
                          self.coords[0] + self.image.width(),\
                          self.coords[1] + self.image.height())
+        self.canv.coords(self.taunt_id,self.coords[0] - 3, self.coords[1] - 3,\
+                         self.coords[0] + self.image.width() + 3,\
+                         self.coords[1] + self.image.height() + 3)
         self.canv.itemconfig(self.atk_id,width=2,outline= "green" if self.can_attack else "red")
+        self.canv.itemconfig(self.taunt_id,width=2,outline= "grey" if self.taunt else "")
     def is_clicked(self,coords):
         if self.coords[0] < coords[0] < self.coords[0] + self.image.width():
             if self.coords[1] < coords[1] < self.coords[1] + self.image.height():
@@ -287,7 +317,7 @@ class Card:
     def battle(self,card):
         self.health -= card.attack;
         card.health -= self.attack;
-        card.can_attack = False
+        #card.can_attack = False
         self.can_attack = False
         return (self,card)
 
