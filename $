@@ -39,10 +39,7 @@ class Game:
         self.canv.create_rectangle(770,345,770+80,345+80,fill="red")
     def start(self):
         self.canv.after(1000//15,self.new_frame)
-        try :
-            self.window.mainloop()
-        except:
-            pass
+        self.window.mainloop()
     def new_frame(self):
         if self.player1.health <= 0:
             self.end_of_game = True
@@ -64,13 +61,13 @@ class Game:
         for index,card in enumerate(self.player1.battlefield):
             if card.health <= 0:
                 card.hide()
-                self.player1.battlefield.pop(index)
                 card.on_death(self, 1)
+                self.player1.battlefield.pop(index)
         for index,card in enumerate(self.player2.battlefield):
             if card.health <= 0:
                 card.hide()
-                self.player2.battlefield.pop(index)
                 card.on_death(self,2)
+                self.player2.battlefield.pop(index)
         if self.current_player == 1:
             self.player1.draw_ally_info()
             self.player1.draw_hand()
@@ -355,16 +352,12 @@ class Card:
         print("join")
         return
     def on_death(self,game,player):
-        if self.name == "Tank":
-            self.name = "reborn"
-            self.health = 1
-            self.attack = 0
-            self.taunt = True
+        self.health = 1
+        self.attack = 0
+        self.taunt = True
+        self.name = "reborn"
+        if self.name != "reborn":
             (game.player1 if player ==1 else game.player2).battlefield.append(self)
-        elif self.name == "Moussa":
-            print("moussa's death :(")
-            for card in (game.player1 if player ==2 else game.player2).battlefield:
-                card.attack = max(1, card.attack - 1)
         return
 
 
