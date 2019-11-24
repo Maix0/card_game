@@ -58,14 +58,6 @@ class Game:
                              text= "Player {} is playing".format(self.current_player))
         self.player1.clear_dead()
         self.player2.clear_dead()
-        for index,card in enumerate(self.player1.battlefield):
-            if card.health <= 0:
-                card.hide()
-                self.player2.battlefield.pop(index)
-        for index,card in enumerate(self.player2.battlefield):
-            if card.health <= 0:
-                card.hide()
-                self.player2.battlefield.pop(index)
         if self.current_player == 1:
             self.player1.draw_ally_info()
             self.player1.draw_hand()
@@ -93,8 +85,6 @@ class Game:
                     current_player.battlefield.append(\
                                     current_player.hand.pop(index).remove_attack())
                     current_player.mana -= card.cost
-                    #self = 
-                    card.on_join(self)
                     return
         for index,card in enumerate(current_player.battlefield):
             if card.is_clicked((e.x,e.y)) and card.can_attack:
@@ -126,11 +116,7 @@ class Game:
                                      else self.player2;
         for card in current_player.battlefield:
             card.can_attack = True
-            #self = 
-            card.on_start_turn(self)
-        for card in old_player.battlefield:
-            #self = 
-            card.on_end_turn(self)
+            card.custom()
         current_player.mana_max += 1 if current_player.mana_max < 10 else 0
         current_player.mana = current_player.mana_max
         if len(current_player.hand) < 6:
@@ -252,7 +238,7 @@ class Player:
         self.canv.coords(self.m_id, self.canv.winfo_width() * 0.92,0)
     def clear_dead(self):
         for index,card in enumerate(self.battlefield):
-            if card.health <= -1:
+            if card.health <= 0:
                 card.hide()
                 self.battlefield.pop(index)
 
@@ -338,19 +324,8 @@ class Card:
     def scale(self):
         self.image = self.image.zoom(IMG_FSIZE[0] // 10)
         self.image = self.image.subsample(IMG_BSIZE[1] // 10)
-
-
-    def on_start_turn(self,game):
-        print("start")
-        return
-    def on_end_turn(self,game):
-        print("end")
-        return
-    def on_join(self,game):
-        print("join")
-        return
-    def on_death(self,game):
-        return
+    def custom(self):
+        pass
 
 
 game = Game()
