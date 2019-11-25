@@ -99,8 +99,11 @@ class Game:
     def click_handler(self,e):
         """ Fonction lancée a chaque fois que le canvas est cliquer 
         Si clique est entre 56 <= x 136 ET 345 <= Y  <= 425: Fini le tour du joueur
-        Si le joueur lci
- s """
+        Si le joueur clique sur une carte dans sa main , regarde si il peut le payer et la place sur le battlefield
+        Si le joueur clique sur une carte dans son battlefield, self.atk_card = (Card,index)
+        Si le joueur clique sur une carte ennemie , fait un combat entre self.atk_card et la carte clique
+        Si le joueur clique entre 770 <= X <= 850 ET 345 <= Y 425: attaque le joueur adverse
+        """
         current_player = self.player1 if self.current_player == 1 \
                                      else self.player2;
         if 56 <= e.x <= 56 + 80 and 345 <= e.y <= 345 + 80:
