@@ -38,12 +38,21 @@ class Game:
         self.canv.create_rectangle(56,345,56+80,345+80,fill="red")
         self.canv.create_rectangle(770,345,770+80,345+80,fill="red")
     def start(self):
+        """ Mets un callback sur la fonction 'new_frame' et lance la fenêtre"""
+
         self.canv.after(1000//15,self.new_frame)
         try :
             self.window.mainloop()
         except:
             pass
+     
     def new_frame(self):
+        """
+        Regarde si un des deux joueur a atteint 0 PV
+        Supprime les carte qui sont morte
+        Dessine les carte sur le canvas
+        Remet un callback 
+        """
         if self.player1.health <= 0:
             self.end_of_game = True
         if self.player2.health <= 0:
@@ -88,6 +97,10 @@ class Game:
         self.canv.after(1000//15,self.new_frame)
         return
     def click_handler(self,e):
+        """ Fonction lancée a chaque fois que le canvas est cliquer 
+        Si clique est entre 56 <= x 136 ET 345 <= Y  <= 425: Fini le tour du joueur
+        Si le joueur lci
+ s """
         current_player = self.player1 if self.current_player == 1 \
                                      else self.player2;
         if 56 <= e.x <= 56 + 80 and 345 <= e.y <= 345 + 80:
