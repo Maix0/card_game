@@ -1,9 +1,6 @@
 import json
 import random
 from tkinter import *
-from tkinter import Canvas
-from typing import List, Any
-
 IMG_FSIZE = (135, 150)
 IMG_BSIZE = (200, 300)
 
@@ -14,10 +11,6 @@ DECK_FILE = "./deck.json"
 
 # noinspection PyTypeChecker
 class Game:
-    w_id: object
-    w_rect: object
-    canv: Canvas
-    current_player: int
 
     def __init__(self):
 
@@ -29,6 +22,8 @@ class Game:
         self.height = 450
         self.canv = Canvas(self.window, width=self.width, height=self.height, bg='Grey')
         self.canv.pack(padx=0, pady=0)
+        self.bg_img = PhotoImage(file="./assets/bg.gif")
+        self.bg_id = self.canv.create_image(0,0,anchor=NW,image=self.bg_img)
         self.player1 = Player(self.canv)
         self.player2 = Player(self.canv)
         self.player1.test()
@@ -67,6 +62,9 @@ class Game:
         Dessine les carte sur le canvas
         Remet un callback
         """
+        self.player1.mana = 100
+        self.player2.mana = 100
+
         if self.player1.health <= 0:
             self.end_of_game = True
         if self.player2.health <= 0:
@@ -182,8 +180,6 @@ class Game:
 
 
 class Player:
-    battlefield: List[Any]
-    health: int
 
     def __init__(self, canv):
         self.canv = canv
@@ -312,9 +308,9 @@ class Player:
         self.canv.itemconfig(self.h_id, text=self.health, anchor=NW)
         self.canv.itemconfig(self.m_id, text="{}/{}".format(self.mana, self.mana_max),
                              anchor=NW)
-        self.canv.coords(self.h_id, 0, self.canv.winfo_height() * 0.95)
+        self.canv.coords(self.h_id, 0, self.canv.winfo_height() * 0.93)
         self.canv.coords(self.m_id, self.canv.winfo_width() * 0.92,
-                         self.canv.winfo_height() * 0.95)
+                         self.canv.winfo_height() * 0.93)
         return
 
     def draw_en_bf(self):
@@ -459,15 +455,34 @@ class Card:
         [EVENT_HANDLER]
         se lance quand le joueur commance son tour
         """
-        print("start")
-        return
+        if self.name == "Projecteur Epson" and random.random() <= 0.9:
+            c = Card({"name": "Projecteur Epson Cassé", "mana":4,"health":1,"attack":0,"image":"assets/broken_proj.gif", "taunt":False},self.canv)
+            self.hide()
+            self.image = c.image
+            self.atk_id = c.atk_id
+            self.attack = c.attack
+            self.a_id = c.a_id
+            self.canv = c.canv
+            self.can_attack = c.can_attack
+            self.coords = c.coords
+            self.cost = c.cost
+            self.c_id = c.c_id
+            self.health = c.health
+            self.h_id = c.h_id
+            self.id = c.id
+            self.name = c.name
+            self.taunt = c.taunt
+            self.taunt_id = c.taunt_id
+            print("broke")
+            pass
 
     def on_end_turn(self, game):
+
         """
         [EVENT_HANDLER]
         se lance quand le joueur fini son tour
         """
-        print("end")
+        #print("end")
         return
 
     def on_join(self, game):
@@ -475,7 +490,7 @@ class Card:
         [EVENT_HANDLER]
         se lance quand la carte arrive sur le champs de bataille
         """
-        print("join")
+        #print("join")
         return
 
     def on_death(self, game, player):
@@ -483,13 +498,7 @@ class Card:
         [EVENT_HANDLER]
         se lance quand la carte meurt
         """
-        if self.name == "Tank":
-            self.name = "reborn"
-            self.health = 1
-            self.attack = 0
-            self.taunt = True
-            (game.player1 if player == 1 else game.player2).battlefield.append(self)
-        elif self.name == "Moussa":
+        if self.name == "Moussa":
             print("moussa's death :(")
             for card in (game.player1 if player == 2 else game.player2).battlefield:
                 card.attack = max(1, card.attack - 1)
